@@ -8,6 +8,8 @@
  * Author:            Jean-Baptiste Biolay
  * License:           GPL-2.0-or-later
  * Text Domain:       aav-lb
+ * GitHub Plugin URI: biolay-group/aav-landing-blocks
+ * Primary Branch:    main
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
