@@ -5,7 +5,7 @@
  * Version:           2.4.3
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            Jean-Baptiste Biolay
+ * Author:            Biolay Group
  * License:           GPL-2.0-or-later
  * Text Domain:       aav-lb
  * GitHub Plugin URI: biolay-group/aav-landing-blocks
