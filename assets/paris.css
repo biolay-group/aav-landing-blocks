@@ -1,0 +1,142 @@
+
+/* ===================================================================
+   AAV — Christmas in Paris  (scope: .prs-)
+   DA « haute couture » : ivoire, encre, or pâle. Aérée, fine, raffinée.
+   PHOTOS : cherche « URL_PHOTO_ » et remplace par l'URL de ta médiathèque.
+   Sans URL, un dégradé de secours élégant s'affiche (rien ne casse).
+   =================================================================== */
+.prs-root{
+  /* ▼ Si les titres restent en Georgia, remplace la valeur par le nom exact
+     de la police du thème (clic droit > Inspecter > onglet Calculé). ▼ */
+  --serif:"Playfair","Playfair Display",Georgia,"Times New Roman",serif;
+  --sans:inherit;
+  --wine:#6A171A;--wine-d:#4E1013;
+  --ink:#14120F;--ink-2:#2B2723;
+  /* plus d'or : bordeaux comme accent, ivoire sur fond sombre */
+  --gold:#6A171A;--gold-l:#F0E4D8;--ivory:#FBF9F5;--ivory-2:#F2EDE4;
+  --line:#E2DACB;--muted:#8A8378;
+  color:var(--ink);line-height:1.6;background:var(--ivory);}
+.prs-root *{box-sizing:border-box;}
+.prs-full{margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}
+.prs-wrap{max-width:1180px;margin:0 auto;padding:0 30px;}
+.prs-narrow{max-width:720px;margin:0 auto;padding:0 30px;}
+
+/* Cadres photo */
+.prs-ph{position:relative;overflow:hidden;background:linear-gradient(150deg,#1A1713 0%,#3A2622 42%,#6A171A 78%,#8E2A2E 130%);}
+.prs-ph--night{background:linear-gradient(160deg,#0F0E0C 0%,#241A1A 45%,#4E1013 80%,#6A171A 130%);}
+.prs-ph--soft{background:linear-gradient(150deg,#2B2723 0%,#4E1013 45%,#8E2A2E 80%,#F2EDE4 130%);}
+.prs-ph > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.prs-cover{position:absolute;inset:0;}
+
+/* Typo utilitaires */
+.prs-eyebrow{display:block;font-size:10px;letter-spacing:.46em;text-transform:uppercase;color:var(--gold);margin:0 0 24px;}
+.prs-serif{font-family:var(--serif);font-weight:400;}
+.prs-h2{font-family:var(--serif);font-weight:400;font-size:clamp(28px,3.8vw,44px);line-height:1.16;letter-spacing:.01em;color:var(--ink);margin:0;}
+.prs-h2 em{font-style:italic;color:var(--gold);}
+.prs-body{font-size:16px;line-height:1.95;color:var(--muted);margin:0;}
+.prs-hair{width:1px;height:56px;background:var(--gold);margin:0 auto;}
+.prs-rule{width:44px;height:1px;background:var(--gold);border:0;margin:26px auto 0;}
+
+/* Boutons fins */
+.prs-btn{display:inline-block;padding:16px 42px;font-size:10px;letter-spacing:.3em;text-transform:uppercase;text-decoration:none;transition:all .3s ease;}
+.prs-btn--gold{border:1px solid var(--gold);color:var(--gold);background:transparent;}
+.prs-btn--gold:hover{background:var(--gold);color:#fff;}
+.prs-btn--light{border:1px solid rgba(255,255,255,.55);color:#fff;}
+.prs-btn--light:hover{background:#fff;color:var(--ink);}
+.prs-btn--ink{background:var(--ink);color:#fff;border:1px solid var(--ink);}
+.prs-btn--ink:hover{background:transparent;color:var(--ink);}
+
+/* ---------- HERO : plein écran, cadre fin, très centré ---------- */
+.prs-hero{position:relative;min-height:96vh;display:flex;align-items:center;justify-content:center;text-align:center;}
+.prs-hero__veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,12,10,.52),rgba(14,12,10,.38) 45%,rgba(14,12,10,.7));}
+.prs-hero__frame{position:absolute;inset:34px;border:1px solid rgba(227,210,168,.32);pointer-events:none;z-index:2;}
+.prs-hero__inner{position:relative;z-index:3;max-width:880px;padding:120px 34px;color:#fff;}
+.prs-hero__eyebrow{color:var(--gold-l);letter-spacing:.5em;}
+.prs-hero__title{font-family:var(--serif);font-weight:400;font-size:clamp(36px,6vw,72px);line-height:1.06;margin:0;color:#fff;}
+.prs-hero__title em{display:block;font-style:italic;color:var(--gold-l);}
+.prs-hero__sub{font-size:15.5px;line-height:2;color:#DCD6CC;margin:30px auto 40px;max-width:600px;}
+
+/* ---------- OUVERTURE : lettrine, très aéré ---------- */
+.prs-open{padding:120px 0 100px;text-align:center;}
+.prs-open__lead{font-family:var(--serif);font-size:clamp(20px,2.4vw,26px);line-height:1.75;color:var(--ink);margin:0 0 26px;}
+.prs-open__lead::first-letter{float:left;font-size:72px;line-height:.78;padding:8px 14px 0 0;color:var(--gold);font-family:var(--serif);}
+
+/* ---------- TRIPTYQUE : 3 photos portrait, filets fins ---------- */
+.prs-tri{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.prs-tri__i .prs-ph{width:100%;padding-top:132%;}
+.prs-tri__c{padding:26px 4px 0;text-align:center;}
+.prs-tri__c h3{font-family:var(--serif);font-weight:400;font-size:22px;color:var(--ink);margin:0 0 10px;}
+.prs-tri__c .prs-num{display:block;font-size:10px;letter-spacing:.4em;color:var(--gold);margin-bottom:14px;}
+.prs-tri__c p{font-size:14.5px;line-height:1.85;color:var(--muted);margin:0;}
+
+/* ---------- BANDEAU CITATION ---------- */
+.prs-band{position:relative;min-height:56vh;display:flex;align-items:center;justify-content:center;text-align:center;}
+.prs-band__veil{position:absolute;inset:0;background:rgba(14,12,10,.55);}
+.prs-band__c{position:relative;z-index:2;max-width:860px;padding:80px 30px;}
+.prs-band__t{font-family:var(--serif);font-style:italic;font-size:clamp(21px,3vw,32px);line-height:1.55;color:#fff;margin:0;}
+
+/* ---------- SPLIT éditorial ---------- */
+.prs-split{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:0;}
+.prs-split__media{position:relative;min-height:600px;}
+.prs-split__body{padding:96px 8%;}
+.prs-split--flip .prs-split__media{order:2;}
+.prs-split__body h2{font-family:var(--serif);font-weight:400;font-size:clamp(26px,3.4vw,38px);line-height:1.2;color:var(--ink);margin:0 0 22px;}
+.prs-split__body h2 em{font-style:italic;color:var(--gold);}
+
+/* ---------- SÉJOUR : liste raffinée ---------- */
+.prs-sejour{background:var(--ivory-2);padding:120px 0;}
+.prs-index{max-width:900px;margin:0 auto;}
+.prs-index__row{display:grid;grid-template-columns:56px 1fr 1.15fr;gap:30px;padding:30px 0;border-top:1px solid var(--line);align-items:baseline;transition:padding-left .3s;}
+.prs-index__row:last-child{border-bottom:1px solid var(--line);}
+.prs-index__row:hover{padding-left:10px;}
+.prs-index__n{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--gold);}
+.prs-index__t{font-family:var(--serif);font-size:21px;color:var(--ink);line-height:1.35;}
+.prs-index__d{font-size:15px;line-height:1.85;color:var(--muted);}
+
+/* ---------- ADRESSES : cartes fines ---------- */
+.prs-addr{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
+.prs-card{position:relative;overflow:hidden;min-height:420px;display:flex;align-items:flex-end;}
+.prs-card__veil{position:absolute;inset:0;background:linear-gradient(0deg,rgba(14,12,10,.9) 0%,rgba(14,12,10,.28) 58%,rgba(14,12,10,0) 100%);transition:background .4s;}
+.prs-card:hover .prs-card__veil{background:linear-gradient(0deg,rgba(14,12,10,.94) 0%,rgba(14,12,10,.45) 68%,rgba(14,12,10,.08) 100%);}
+.prs-card img{transition:transform 1.2s cubic-bezier(.2,.7,.3,1);}
+.prs-card:hover img{transform:scale(1.05);}
+.prs-card__c{position:relative;z-index:2;padding:38px 36px;color:#fff;}
+.prs-card__c .prs-num{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold-l);}
+.prs-card__c h3{font-family:var(--serif);font-weight:400;font-size:26px;margin:12px 0 10px;color:#fff;}
+.prs-card__c p{margin:0;font-size:14.5px;line-height:1.8;color:#C6BFB4;max-width:400px;}
+
+/* ---------- TÉMOIGNAGE ---------- */
+.prs-quote{background:var(--ink);color:#fff;text-align:center;padding:110px 30px;}
+.prs-quote__t{font-family:var(--serif);font-size:clamp(21px,2.9vw,30px);line-height:1.6;color:#fff;max-width:840px;margin:30px auto 26px;}
+.prs-quote__a{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold-l);}
+
+/* ---------- FAQ ---------- */
+.prs-faq-sec{padding:120px 0;background:var(--ivory);}
+.prs-faq{max-width:840px;margin:0 auto;}
+.prs-faq details{border-bottom:1px solid var(--line);}
+.prs-faq summary{font-family:var(--serif);list-style:none;cursor:pointer;padding:26px 44px 26px 0;position:relative;font-family:var(--serif);font-size:19px;color:var(--ink);}
+.prs-faq summary::-webkit-details-marker{display:none;}
+.prs-faq summary::after{content:"+";position:absolute;right:4px;top:24px;font-size:20px;color:var(--gold);}
+.prs-faq details[open] summary::after{content:"\2013";}
+.prs-faq p{margin:0 0 26px;font-size:15.5px;line-height:1.95;color:var(--muted);}
+
+/* ---------- PLAN ---------- */
+.prs-plan{position:relative;}
+.prs-plan__veil{position:absolute;inset:0;background:rgba(14,12,10,.82);}
+.prs-plan__inner{position:relative;z-index:2;max-width:700px;margin:0 auto;padding:120px 30px;text-align:center;}
+.prs-plan h2{font-family:var(--serif);font-weight:400;font-size:clamp(28px,4vw,44px);line-height:1.16;color:#fff;margin:0 0 20px;}
+.prs-plan h2 em{font-style:italic;color:var(--gold-l);}
+.prs-plan p.prs-plan__sub{font-size:15.5px;line-height:2;color:#CFC8BD;margin:0 0 40px;}
+.prs-form{background:#fff;padding:42px;text-align:left;}
+
+@media(max-width:900px){
+  .prs-tri{grid-template-columns:1fr;gap:44px;}
+  .prs-split{grid-template-columns:1fr;}
+  .prs-split--flip .prs-split__media{order:0;}
+  .prs-split__media{min-height:420px;}
+  .prs-split__body{padding:70px 30px;}
+  .prs-index__row{grid-template-columns:1fr;gap:10px;}
+  .prs-addr{grid-template-columns:1fr;}
+  .prs-hero__frame{inset:18px;}
+}
+
