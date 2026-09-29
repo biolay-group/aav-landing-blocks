@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       AAV — Landing Blocks
  * Description:        Editable ACF blocks for the AAV premium landing pages. Béatrice edits titles, texts, photos and the form link from the visual editor; the design stays pixel-perfect. Blocks: Alsace, Paris, French Alps, Sustainability, Our Story, The Little Black Book + Landing sur-mesure. Studio de modèles : créer/importer de nouvelles pages depuis l'admin, sans réinstaller l'extension. Works with Secure Custom Fields (SCF) or ACF PRO — both provide the blocks + repeater API.
- * Version:           2.5.0
+ * Version:           2.6.0
  * Update URI:        https://github.com/biolay-group/aav-landing-blocks
  * Requires at least: 6.0
  * Requires PHP:      7.4
@@ -2102,6 +2102,9 @@ function aav_lb_render_sustainability( $block, $content = '', $is_preview = fals
  *   - clés de champs : bfld_… / accordéons : btab_…  (name = substr($key,5))
  *   - répéteurs sans valeur par défaut → repli sur tableaux $def_* au rendu
  *   - photos : ID de médiathèque, repli URL via aav_lb_url_to_id()
+ *     (les URL par défaut pointent vers des visuels déjà présents dans
+ *     la médiathèque du site ; une URL de vignette -400x300 est ramenée
+ *     au fichier d'origine avant résolution)
  *   - CSS : assets/little-black-book.css (préfixe .alb-)
  * ================================================================== */
 add_action( 'acf/init', function () {
@@ -2129,33 +2132,44 @@ add_action( 'acf/init', function () {
 		return array( 'key' => $key, 'label' => $label, 'name' => substr( $key, 5 ), 'type' => $type, 'default_value' => $default, 'instructions' => $instr );
 	};
 	$tab = function ( $key, $label ) { return array( 'key' => $key, 'label' => $label, 'type' => 'accordion', 'open' => 0, 'multi_expand' => 1 ); };
-	$img = function ( $key, $label, $instr = 'Vide = la photo par défaut reste affichée.' ) {
+	$img = function ( $key, $label, $instr = 'Vide = la photo par défaut (déjà dans la médiathèque) reste affichée.' ) {
 		return array( 'key' => $key, 'label' => $label, 'name' => substr( $key, 5 ), 'type' => 'image', 'return_format' => 'id', 'preview_size' => 'medium', 'library' => 'all', 'instructions' => $instr );
+	};
+	$sub_img = function ( $key, $label ) {
+		return array( 'key' => $key, 'label' => $label, 'name' => substr( $key, 5 ), 'type' => 'image', 'return_format' => 'id', 'preview_size' => 'thumbnail', 'library' => 'all' );
 	};
 
 	$f = array();
 
 	/* ---- Héro (la couverture) ---- */
 	$f[] = $tab( 'btab_hero', 'Héro (couverture)' );
-	$f[] = $T( 'bfld_hero_video', 'Vidéo de fond (URL .mp4)', '', 'text', 'Optionnel. MP4 H.264, 1080p, boucle 10 à 20 s, sans son, idéalement moins de 10 Mo. Vide = photo seule.' );
-	$f[] = $img( 'bfld_hero_photo', 'Image de fond', 'Affichée pendant le chargement de la vidéo et en secours. Vide = photo actuelle de la page Little Black Book.' );
+	$f[] = $T( 'bfld_hero_video', 'Vidéo de fond (URL .mp4)', '', 'text', 'Optionnel. MP4 H.264, 1080p, boucle 10 à 20 s, sans son, idéalement moins de 10 Mo. Vide = photo seule, avec un lent zoom.' );
+	$f[] = $img( 'bfld_hero_photo', 'Image de fond', 'Affichée pendant le chargement de la vidéo et en secours. Vide = le carnet ancien de la page actuelle.' );
 	$f[] = $T( 'bfld_hero_kicker', 'Surtitre', '20 Years · One Exceptional Network' );
 	$f[] = $T( 'bfld_hero_title', 'Titre', 'The Little' );
 	$f[] = $T( 'bfld_hero_title_em', 'Titre : italique doré', 'Black Book' );
 	$f[] = $T( 'bfld_hero_sub', 'Accroche', 'Twenty years of relationships have opened doors to exceptional people, places and experiences. Our Little Black Book is where local expertise, trusted connections and the unexpected come together.', 'textarea' );
 	$f[] = $T( 'bfld_hero_meta', 'Ligne discrète sous l\'accroche', 'Twenty years · Six countries · One address book', 'text', 'Vide = masquée.' );
 	$f[] = $T( 'bfld_hero_cue', 'Invitation à défiler', 'Open the book', 'text', 'Vide = masquée.' );
+	$f[] = $T( 'bfld_toc_lb', 'Sommaire : libellé', 'Contents', 'text', 'Barre de sommaire sous le héro (liens vers les chapitres). Vide = barre masquée.' );
 
 	/* ---- I. Vingt ans ---- */
 	$f[] = $tab( 'btab_mak', 'I : Twenty years in the making' );
 	$f[] = $T( 'bfld_mak_lb', 'Libellé du chapitre', 'Twenty years in the making' );
 	$f[] = $T( 'bfld_mak_st', 'Grande phrase', 'The most memorable journeys begin with', 'textarea' );
 	$f[] = $T( 'bfld_mak_st_em', 'Grande phrase : partie italique', 'who you know.' );
-	$f[] = $T( 'bfld_mak_p1', 'Colonne gauche', 'For more than twenty years, AAV has built trusted relationships with the people who make Europe extraordinary: château owners and vignerons, chefs and artisans, curators, guides and private hosts. These are not suppliers found in a directory. They are friends of the house, met in person and returned to year after year.', 'textarea' );
-	$f[] = $T( 'bfld_mak_p2', 'Colonne droite', 'This is not simply a network of partners. It is a Little Black Book built over two decades, one relationship at a time: the numbers that answer, the doors that open, the names that vouch for ours. It is, quite simply, the reason our journeys feel the way they do.', 'textarea' );
+	$f[] = $T( 'bfld_mak_p1', 'Paragraphe 1', 'For more than twenty years, AAV has built trusted relationships with the people who make Europe extraordinary: château owners and vignerons, chefs and artisans, curators, guides and private hosts. These are not suppliers found in a directory. They are friends of the house, met in person and returned to year after year.', 'textarea' );
+	$f[] = $T( 'bfld_mak_p2', 'Paragraphe 2', 'This is not simply a network of partners. It is a Little Black Book built over two decades, one relationship at a time: the numbers that answer, the doors that open, the names that vouch for ours. It is, quite simply, the reason our journeys feel the way they do.', 'textarea' );
+	$f[] = $img( 'bfld_mak_photo1', 'Photo principale (portrait)' );
+	$f[] = $img( 'bfld_mak_photo2', 'Photo en médaillon (se superpose)' );
+	$f[] = $T( 'bfld_mak_cap', 'Légende sous les photos', 'Met in person. Kept for years.', 'text', 'Vide = masquée.' );
 	$f[] = $T( 'bfld_mak_mark', 'Filigrane (grand chiffre en fond)', '20', 'text', 'Vide = masqué.' );
 	$f[] = array( 'key' => 'bfld_mak_figs', 'label' => 'Chiffres', 'name' => 'mak_figs', 'type' => 'repeater', 'layout' => 'table', 'button_label' => 'Ajouter un chiffre', 'instructions' => 'Vide = garder les chiffres par défaut. Pour n\'en afficher aucun, saisir une ligne vide.', 'sub_fields' => array(
 		$T( 'bfld_mak_fn', 'Chiffre', '' ), $T( 'bfld_mak_fl', 'Libellé', '' ),
+	) );
+	$f[] = $T( 'bfld_mak_people_lb', 'Galerie : surtitre', 'The people we know', 'text', 'Vide = galerie masquée.' );
+	$f[] = array( 'key' => 'bfld_mak_people', 'label' => 'Galerie : les personnes', 'name' => 'mak_people', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter une personne', 'instructions' => 'Vide = garder les 5 portraits par défaut. Photos au format portrait de préférence.', 'sub_fields' => array(
+		$sub_img( 'bfld_ppl_ph', 'Photo' ), $T( 'bfld_ppl_role', 'Rôle (Playfair italique)', '' ), $T( 'bfld_ppl_line', 'Une ligne', '', 'textarea' ),
 	) );
 
 	/* ---- II. Europe ---- */
@@ -2164,24 +2178,27 @@ add_action( 'acf/init', function () {
 	$f[] = $T( 'bfld_eur_title', 'Titre', 'Twenty years of connections' );
 	$f[] = $T( 'bfld_eur_title_em', 'Titre : italique doré', 'across Europe' );
 	$f[] = $T( 'bfld_eur_intro', 'Introduction', 'France is the heart of what we do, and where most of our journeys unfold. Yet the same relationships, cultivated with the same patience, reach across Italy, Switzerland, the United Kingdom, Spain and Portugal. In every country, our specialists live where you travel, and the people they trust become the people you meet.', 'textarea' );
-	$f[] = array( 'key' => 'bfld_eur_items', 'label' => 'Pays (index du carnet)', 'name' => 'eur_items', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter un pays', 'instructions' => 'Vide = garder les 6 pays par défaut. Le code (FR, IT…) s\'affiche dans la vignette quand il n\'y a pas de photo.', 'sub_fields' => array(
+	$f[] = $T( 'bfld_eur_ribbon', 'Ruban défilant (lieux, séparés par des virgules)', 'Paris, Bordeaux, Burgundy, Champagne, the Loire, Provence, the Riviera, Alsace, Piedmont, Tuscany, Lake Geneva, Zermatt, London, the Cotswolds, Andalusia, the Basque Country, the Douro, Lisbon', 'textarea', 'Vide = ruban masqué.' );
+	$f[] = array( 'key' => 'bfld_eur_items', 'label' => 'Pays (index du carnet)', 'name' => 'eur_items', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter un pays', 'instructions' => 'Vide = garder les 6 pays par défaut. Sans photo, une planche typographique (nom du pays + code) est affichée.', 'sub_fields' => array(
 		$T( 'bfld_eur_n', 'Pays', '' ), $T( 'bfld_eur_c', 'Code (2 lettres)', '' ), $T( 'bfld_eur_d', 'Une ligne', '', 'textarea' ),
-		array( 'key' => 'bfld_eur_ph', 'label' => 'Photo (optionnelle)', 'name' => 'eur_ph', 'type' => 'image', 'return_format' => 'id', 'preview_size' => 'thumbnail', 'library' => 'all' ),
+		$sub_img( 'bfld_eur_ph', 'Photo' ),
 	) );
 	$f[] = $T( 'bfld_eur_foot', 'Phrase de fin (italique)', 'And, when your story calls for it, beyond.', 'text', 'Vide = masquée.' );
 
 	/* ---- III. Behind closed doors ---- */
 	$f[] = $tab( 'btab_dor', 'III : Behind closed doors' );
-	$f[] = $img( 'bfld_dor_photo', 'Photo' );
+	$f[] = $img( 'bfld_dor_photo', 'Photo de fond (pleine largeur)' );
 	$f[] = $T( 'bfld_dor_seal', 'Monogramme du sceau', 'AAV', 'text', 'Vide = sceau masqué.' );
 	$f[] = $T( 'bfld_dor_lb', 'Libellé du chapitre', 'The Little Black Book' );
 	$f[] = $T( 'bfld_dor_title', 'Titre', 'Behind' );
 	$f[] = $T( 'bfld_dor_title_em', 'Titre : italique doré', 'closed doors' );
 	$f[] = $T( 'bfld_dor_p1', 'Chapeau', 'Some of the most memorable experiences cannot simply be booked. They are offered, by people who choose whom they welcome. They exist outside opening hours and off the pages of any guidebook, and they are extended only through introduction.', 'textarea' );
 	$f[] = $T( 'bfld_dor_p2', 'Paragraphe', 'A private collection viewed with its owner. An exceptional estate that is still a family home. An artist\'s studio on a working morning. Each door is opened for you personally, always with discretion, and never simply for the sake of exclusivity.', 'textarea' );
-	$f[] = $T( 'bfld_dor_pages_lb', 'Surtitre de la liste', 'Pages from the book' );
-	$f[] = array( 'key' => 'bfld_dor_pages', 'label' => 'Pages du carnet', 'name' => 'dor_pages', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter une page', 'instructions' => 'Vide = garder les 6 exemples par défaut.', 'sub_fields' => array(
-		$T( 'bfld_dor_ph', 'Titre', '' ), $T( 'bfld_dor_pd', 'Description', '', 'textarea' ),
+	$f[] = $T( 'bfld_dor_pages_lb', 'Pages du carnet : surtitre', 'Pages from the book' );
+	$f[] = $T( 'bfld_dor_pages_t', 'Pages du carnet : titre', 'A few doors' );
+	$f[] = $T( 'bfld_dor_pages_te', 'Pages du carnet : titre italique', 'we have opened' );
+	$f[] = array( 'key' => 'bfld_dor_pages', 'label' => 'Pages du carnet', 'name' => 'dor_pages', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter une page', 'instructions' => 'Vide = garder les 6 exemples par défaut (avec leurs photos).', 'sub_fields' => array(
+		$sub_img( 'bfld_dor_pp', 'Photo' ), $T( 'bfld_dor_ph', 'Titre', '' ), $T( 'bfld_dor_pd', 'Description', '', 'textarea' ),
 	) );
 
 	/* ---- IV. Comment nous ouvrons les portes ---- */
@@ -2194,6 +2211,12 @@ add_action( 'acf/init', function () {
 		$T( 'bfld_way_h', 'Titre', '' ), $T( 'bfld_way_d', 'Description', '', 'textarea' ),
 	) );
 
+	/* ---- Citation pleine largeur ---- */
+	$f[] = $tab( 'btab_quo', 'Citation pleine largeur' );
+	$f[] = $img( 'bfld_quo_photo', 'Photo de fond' );
+	$f[] = $T( 'bfld_quo_txt', 'Citation (Playfair italique)', 'Doors do not open for reservations. They open for friends.', 'textarea', 'Vide = bande masquée.' );
+	$f[] = $T( 'bfld_quo_by', 'Signature', 'The AAV way, for twenty years', 'text', 'Vide = masquée.' );
+
 	/* ---- V. Note ---- */
 	$f[] = $tab( 'btab_note', 'V : A word on discretion' );
 	$f[] = $T( 'bfld_note_lb', 'Libellé du chapitre', 'A word on discretion' );
@@ -2201,6 +2224,7 @@ add_action( 'acf/init', function () {
 
 	/* ---- Clôture ---- */
 	$f[] = $tab( 'btab_cta', 'Clôture' );
+	$f[] = $img( 'bfld_cta_photo', 'Photo de fond' );
 	$f[] = $T( 'bfld_cta_lb', 'Surtitre', 'Your journey starts here' );
 	$f[] = $T( 'bfld_cta_title', 'Titre', 'Open the' );
 	$f[] = $T( 'bfld_cta_title_em', 'Titre : italique doré', 'Little Black Book' );
@@ -2241,10 +2265,21 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
 		return $d;
 	};
 	$rows = function ( $n, $fb ) { $v = get_field( $n ); return ( is_array( $v ) && count( $v ) ) ? $v : $fb; };
-	$img_url = function ( $id, $default_url = '' ) {
-		$url = $id ? wp_get_attachment_image_url( $id, 'full' ) : '';
-		if ( ! $url && $default_url ) { $did = aav_lb_url_to_id( $default_url ); $url = $did ? wp_get_attachment_image_url( $did, 'full' ) : $default_url; }
-		return $url ? $url : '';
+
+	/* URL d'image : ID de médiathèque en priorité, sinon URL par défaut
+	   ramenée à son fichier d'origine (…-400x300.jpg → ….jpg / …-scaled.jpg)
+	   et résolue en ID quand c'est possible, pour servir la bonne taille. */
+	$img_url = function ( $id, $default_url = '', $size = 'full' ) {
+		$url = $id ? wp_get_attachment_image_url( (int) $id, $size ) : '';
+		if ( $url ) return $url;
+		if ( ! $default_url ) return '';
+		$base = preg_replace( '/-\d+x\d+(\.[a-z]{3,4})$/i', '$1', $default_url );
+		$try  = array_unique( array( $default_url, $base, preg_replace( '/(\.[a-z]{3,4})$/i', '-scaled$1', $base ) ) );
+		foreach ( $try as $u ) {
+			$did = aav_lb_url_to_id( $u );
+			if ( $did ) { $r = wp_get_attachment_image_url( $did, $size ); if ( $r ) return $r; }
+		}
+		return $base;
 	};
 	$roman = function ( $n ) {
 		$map = array( 'X' => 10, 'IX' => 9, 'V' => 5, 'IV' => 4, 'I' => 1 ); $r = '';
@@ -2252,9 +2287,15 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
 		return $r;
 	};
 
+	/* Visuels par défaut : tous déjà présents dans la médiathèque du site */
+	$U  = 'https://www.aavluxurytravel.com/wp-content/uploads/';
 	$dp = array(
-		'hero' => 'https://www.aavluxurytravel.com/wp-content/uploads/2021/03/shutterstock_125765180-scaled.jpg',
-		'dor'  => 'https://www.aavluxurytravel.com/wp-content/uploads/2026/07/AdobeStock_513153814-1-scaled.jpeg',
+		'hero'   => $U . '2021/03/shutterstock_125765180-scaled.jpg',
+		'mak1'   => $U . '2026/07/Eric_Strasbourg.jpg',
+		'mak2'   => $U . '2026/07/AdobeStock_535355681-scaled.jpeg',
+		'dor'    => $U . '2021/02/shutterstock_156171842-scaled.jpg',
+		'quo'    => $U . '2021/01/Paris-Pont-Alexandre32.jpg',
+		'cta'    => $U . '2026/09/honeymooninfrance-1-scaled.jpeg',
 	);
 
 	$def_figs = array(
@@ -2262,21 +2303,28 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
 		array( 'mak_fn' => '6',  'mak_fl' => 'Countries, one house' ),
 		array( 'mak_fn' => '1',  'mak_fl' => 'Little Black Book' ),
 	);
+	$def_people = array(
+		array( '_url' => $U . '2026/07/AdobeStock_306421927-1-scaled.jpeg', 'ppl_role' => 'The vigneron',  'ppl_line' => 'Who pours the vintage that never leaves the estate.' ),
+		array( '_url' => $U . '2026/09/Gourmet6-scaled.jpg',                 'ppl_role' => 'The chef',      'ppl_line' => 'Who cooks for you at a table that has no menu.' ),
+		array( '_url' => $U . '2021/01/shutterstock480655321.jpg',           'ppl_role' => 'The jeweller',  'ppl_line' => 'Who opens the archive, not the boutique.' ),
+		array( '_url' => $U . '2021/01/chateau-medieval2.jpg',               'ppl_role' => 'The owner',     'ppl_line' => 'Whose family has kept the château for generations.' ),
+		array( '_url' => $U . '2026/09/Private-Driver-1-scaled.jpg',         'ppl_role' => 'The driver',    'ppl_line' => 'Who knows the road, the season and your name.' ),
+	);
 	$def_eur = array(
-		array( 'eur_n' => 'France',         'eur_c' => 'FR', 'eur_d' => 'The heart of the house. Châteaux, ateliers and vineyards we have known, and been welcomed in, for two decades.' ),
-		array( 'eur_n' => 'Italy',          'eur_c' => 'IT', 'eur_d' => 'From Piedmont to Puglia: the families, cellars and workshops behind the façades, and the tables that never needed a sign.' ),
-		array( 'eur_n' => 'Switzerland',    'eur_c' => 'CH', 'eur_d' => 'Alpine addresses, lakeside houses and the quiet precision of the people who keep them.' ),
-		array( 'eur_n' => 'United Kingdom', 'eur_c' => 'UK', 'eur_d' => 'Country estates, private rooms in London and the people who hold the keys.' ),
-		array( 'eur_n' => 'Spain',          'eur_c' => 'ES', 'eur_d' => 'Andalusian cortijos, Basque kitchens and artisans no guidebook will ever list.' ),
-		array( 'eur_n' => 'Portugal',       'eur_c' => 'PT', 'eur_d' => 'Quintas of the Douro, Lisbon ateliers and a coastline known by first name.' ),
+		array( 'eur_n' => 'France',         'eur_c' => 'FR', '_url' => $U . '2026/09/Chenonceau-hot-air-balloon-small.jpg', 'eur_d' => 'The heart of the house. Châteaux, ateliers and vineyards we have known, and been welcomed in, for two decades.' ),
+		array( 'eur_n' => 'Italy',          'eur_c' => 'IT', '_url' => $U . '2026/07/AdobeStock_191204993-scaled.jpeg',      'eur_d' => 'From Piedmont to Puglia: the families, cellars and workshops behind the façades, and the tables that never needed a sign.' ),
+		array( 'eur_n' => 'Switzerland',    'eur_c' => 'CH', '_url' => $U . '2026/07/AdobeStock_353324432-scaled.jpeg',      'eur_d' => 'Alpine addresses, lakeside houses and the quiet precision of the people who keep them.' ),
+		array( 'eur_n' => 'United Kingdom', 'eur_c' => 'UK', '_url' => $U . '2021/02/shutterstock_1257872494.jpg',           'eur_d' => 'Country estates, private rooms in London and the people who hold the keys.' ),
+		array( 'eur_n' => 'Spain',          'eur_c' => 'ES', '_url' => '',                                                    'eur_d' => 'Andalusian cortijos, Basque kitchens and artisans no guidebook will ever list.' ),
+		array( 'eur_n' => 'Portugal',       'eur_c' => 'PT', '_url' => '',                                                    'eur_d' => 'Quintas of the Douro, Lisbon ateliers and a coastline known by first name.' ),
 	);
 	$def_pages = array(
-		array( 'dor_ph' => 'A private collection',          'dor_pd' => 'Viewed after hours with its owner, in rooms that never open to the public.' ),
-		array( 'dor_ph' => 'An estate that is still a home', 'dor_pd' => 'Lunch served by the family who have kept the château for generations, at their own table.' ),
-		array( 'dor_ph' => 'An artist\'s studio',            'dor_pd' => 'A working morning among the pieces in progress, with the artist rather than a guide.' ),
-		array( 'dor_ph' => 'Coco Chanel\'s private apartments', 'dor_pd' => 'Rue Cambon, by introduction, and a story told by those who know it best.' ),
-		array( 'dor_ph' => 'A jeweller\'s archive on Place Vendôme', 'dor_pd' => 'Historic collections shown by the house itself, behind a door without a handle.' ),
-		array( 'dor_ph' => 'A cellar without a sign',        'dor_pd' => 'A vigneron\'s own reserve in Bordeaux, Burgundy or Champagne, opened for a table of four.' ),
+		array( '_url' => $U . '2021/02/shutterstock_217564789.jpg',   'dor_ph' => 'A private collection',                'dor_pd' => 'Viewed after hours with its owner, in rooms that never open to the public.' ),
+		array( '_url' => $U . '2021/01/chateau-medieval2.jpg',        'dor_ph' => 'An estate that is still a home',      'dor_pd' => 'Lunch served by the family who have kept the château for generations, at their own table.' ),
+		array( '_url' => $U . '2026/09/Gourmet6-scaled.jpg',          'dor_ph' => 'A table that is not a restaurant',    'dor_pd' => 'A chef cooking for you alone, in a kitchen that has never printed a menu.' ),
+		array( '_url' => $U . '2021/02/Shopping13.jpg',               'dor_ph' => 'Coco Chanel\'s private apartments',   'dor_pd' => 'Rue Cambon, by introduction, and a story told by those who know it best.' ),
+		array( '_url' => $U . '2021/01/shutterstock480655321.jpg',    'dor_ph' => 'A jeweller\'s archive on Place Vendôme', 'dor_pd' => 'Historic collections shown by the house itself, behind a door without a handle.' ),
+		array( '_url' => $U . '2026/09/Burgundy4-small.jpg',          'dor_ph' => 'A cellar without a sign',             'dor_pd' => 'A vigneron\'s own reserve in Bordeaux, Burgundy or Champagne, opened for a table of four.' ),
 	);
 	$def_way = array(
 		array( 'way_h' => 'Earned in person',      'way_d' => 'Every introduction in our book was made face to face and kept over years. It is why doors open for our guests that do not open for a booking platform.' ),
@@ -2284,14 +2332,19 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
 		array( 'way_h' => 'Never for its own sake', 'way_d' => 'Access matters only when it means something to you. We open a door because it belongs in your story, not because it is hard to open.' ),
 	);
 
-	$figs  = $rows( 'mak_figs', $def_figs );
-	$eur   = $rows( 'eur_items', $def_eur );
-	$pages = $rows( 'dor_pages', $def_pages );
-	$way   = $rows( 'way_items', $def_way );
+	$figs   = $rows( 'mak_figs', $def_figs );
+	$people = $rows( 'mak_people', $def_people );
+	$eur    = $rows( 'eur_items', $def_eur );
+	$pages  = $rows( 'dor_pages', $def_pages );
+	$way    = $rows( 'way_items', $def_way );
 
-	$video          = trim( (string) $f( 'hero_video', '' ) );
-	$hero_photo_url = $img_url( (int) get_field( 'hero_photo' ), $dp['hero'] );
-	$dor_photo_url  = $img_url( (int) get_field( 'dor_photo' ), $dp['dor'] );
+	$video    = trim( (string) $f( 'hero_video', '' ) );
+	$hero_url = $img_url( get_field( 'hero_photo' ), $dp['hero'] );
+	$mak1_url = $img_url( get_field( 'mak_photo1' ), $dp['mak1'], 'large' );
+	$mak2_url = $img_url( get_field( 'mak_photo2' ), $dp['mak2'], 'large' );
+	$dor_url  = $img_url( get_field( 'dor_photo' ), $dp['dor'] );
+	$quo_url  = $img_url( get_field( 'quo_photo' ), $dp['quo'] );
+	$cta_url  = $img_url( get_field( 'cta_photo' ), $dp['cta'] );
 
 	$btn_url = aav_lb_cta_url( $f( 'cta_btn_u' ), '/tailor-my-trip/' );
 	$alt_url = trim( (string) $f( 'cta_link_u', '' ) );
@@ -2302,6 +2355,15 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
 		$alt_url = aav_lb_cta_url( $alt_url, '' );
 	}
 
+	$ribbon = array_filter( array_map( 'trim', explode( ',', (string) $f( 'eur_ribbon', '' ) ) ) );
+	$toc = array(
+		array( 'I',   '#alb-making', $f( 'mak_lb' ) ),
+		array( 'II',  '#alb-europe', $f( 'eur_lb' ) ),
+		array( 'III', '#alb-doors',  $f( 'dor_lb' ) ),
+		array( 'IV',  '#alb-way',    $f( 'way_lb' ) ),
+		array( 'V',   '#alb-note',   $f( 'note_lb' ) ),
+	);
+
 	$css = aav_lb_css( 'little-black-book' );
 	ob_start();
 	if ( $css ) echo '<style>' . $css . '</style>';
@@ -2311,11 +2373,11 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
   <!-- 1. HÉRO : la couverture -->
   <section class="alb-hero">
     <div class="alb-hero-media" aria-hidden="true">
-      <?php if ( $hero_photo_url ) : ?>
-      <img class="alb-hero-still" src="<?php echo esc_url( $hero_photo_url ); ?>" alt="" loading="eager" onerror="this.style.display='none'">
+      <?php if ( $hero_url ) : ?>
+      <img class="alb-hero-still<?php echo $video ? '' : ' alb-kb'; ?>" src="<?php echo esc_url( $hero_url ); ?>" alt="" loading="eager" onerror="this.style.display='none'">
       <?php endif; ?>
       <?php if ( $video ) : ?>
-      <video class="alb-hero-vid" autoplay muted loop playsinline preload="metadata"<?php echo $hero_photo_url ? ' poster="' . esc_url( $hero_photo_url ) . '"' : ''; ?>>
+      <video class="alb-hero-vid" autoplay muted loop playsinline preload="metadata"<?php echo $hero_url ? ' poster="' . esc_url( $hero_url ) . '"' : ''; ?>>
         <source src="<?php echo esc_url( $video ); ?>" type="video/mp4">
       </video>
       <?php endif; ?>
@@ -2337,6 +2399,20 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
     <div class="alb-hero-edge" aria-hidden="true"></div>
   </section>
 
+  <!-- SOMMAIRE -->
+  <?php if ( $f( 'toc_lb' ) ) : ?>
+  <nav class="alb-toc alb-ivory" aria-label="<?php echo esc_attr( $f( 'toc_lb' ) ); ?>">
+    <div class="alb-wrap">
+      <span class="lb"><?php echo esc_html( $f( 'toc_lb' ) ); ?></span>
+      <ul>
+        <?php foreach ( $toc as $t ) : if ( ! $t[2] ) continue; ?>
+        <li><a href="<?php echo esc_url( get_permalink() . $t[1] ); ?>"><span class="rn"><?php echo esc_html( $t[0] ); ?></span><?php echo esc_html( $t[2] ); ?></a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </nav>
+  <?php endif; ?>
+
   <!-- 2. VINGT ANS -->
   <section class="alb-making" id="alb-making">
     <?php if ( $f( 'mak_mark' ) ) : ?>
@@ -2344,25 +2420,57 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
     <?php endif; ?>
     <div class="alb-folio" aria-hidden="true">i</div>
     <div class="alb-wrap">
-      <div class="alb-chap alb-rv"><span class="rn">I</span><span class="lb"><?php echo esc_html( $f( 'mak_lb' ) ); ?></span></div>
-      <p class="alb-statement alb-rv alb-d1"><?php echo esc_html( $f( 'mak_st' ) ); ?> <span class="alb-em"><?php echo esc_html( $f( 'mak_st_em' ) ); ?></span></p>
-      <div class="cols">
-        <div class="alb-rv alb-d2"><p><?php echo esc_html( $f( 'mak_p1' ) ); ?></p></div>
-        <div class="alb-rv alb-d3"><p><?php echo esc_html( $f( 'mak_p2' ) ); ?></p></div>
+      <div class="grid">
+        <div class="copy">
+          <div class="alb-chap alb-rv"><span class="rn">I</span><span class="lb"><?php echo esc_html( $f( 'mak_lb' ) ); ?></span></div>
+          <p class="alb-statement alb-rv alb-d1"><?php echo esc_html( $f( 'mak_st' ) ); ?> <span class="alb-em"><?php echo esc_html( $f( 'mak_st_em' ) ); ?></span></p>
+          <div class="alb-rv alb-d2"><p><?php echo esc_html( $f( 'mak_p1' ) ); ?></p></div>
+          <div class="alb-rv alb-d3"><p><?php echo esc_html( $f( 'mak_p2' ) ); ?></p></div>
+          <?php $figs = array_filter( $figs, function ( $r ) { return ! empty( $r['mak_fn'] ) || ! empty( $r['mak_fl'] ); } ); if ( $figs ) : ?>
+          <div class="figures alb-rv alb-d3">
+            <?php foreach ( $figs as $r ) : ?>
+            <div><div class="n"><?php echo esc_html( isset( $r['mak_fn'] ) ? $r['mak_fn'] : '' ); ?></div><div class="l"><?php echo esc_html( isset( $r['mak_fl'] ) ? $r['mak_fl'] : '' ); ?></div></div>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
+        </div>
+        <div class="alb-collage alb-rv alb-d2">
+          <div class="main"><?php if ( $mak1_url ) : ?><img src="<?php echo esc_url( $mak1_url ); ?>" alt="" loading="lazy" onerror="this.style.display='none'"><?php endif; ?></div>
+          <?php if ( $mak2_url ) : ?>
+          <div class="inset"><img src="<?php echo esc_url( $mak2_url ); ?>" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>
+          <?php endif; ?>
+          <?php if ( $f( 'mak_cap' ) ) : ?>
+          <div class="cap"><?php echo esc_html( $f( 'mak_cap' ) ); ?></div>
+          <?php endif; ?>
+        </div>
       </div>
-      <?php $figs = array_filter( $figs, function ( $r ) { return ! empty( $r['mak_fn'] ) || ! empty( $r['mak_fl'] ); } ); if ( $figs ) : ?>
-      <div class="figures alb-rv alb-d3">
-        <?php foreach ( $figs as $r ) : ?>
-        <div><div class="n"><?php echo esc_html( isset( $r['mak_fn'] ) ? $r['mak_fn'] : '' ); ?></div><div class="l"><?php echo esc_html( isset( $r['mak_fl'] ) ? $r['mak_fl'] : '' ); ?></div></div>
-        <?php endforeach; ?>
+
+      <?php if ( $f( 'mak_people_lb' ) && $people ) : ?>
+      <div class="alb-people">
+        <span class="alb-kicker left alb-rv"><?php echo esc_html( $f( 'mak_people_lb' ) ); ?></span>
+        <div class="row">
+          <?php $i = 0; foreach ( $people as $r ) : $i++; $d = ( $i - 1 ) % 4;
+            $u = $img_url( isset( $r['ppl_ph'] ) ? $r['ppl_ph'] : 0, isset( $r['_url'] ) ? $r['_url'] : '', 'large' ); ?>
+          <figure class="alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?>">
+            <div class="ph"><?php if ( $u ) : ?><img src="<?php echo esc_url( $u ); ?>" alt="<?php echo esc_attr( isset( $r['ppl_role'] ) ? $r['ppl_role'] : '' ); ?>" loading="lazy"><?php endif; ?></div>
+            <figcaption>
+              <span class="role"><?php echo esc_html( isset( $r['ppl_role'] ) ? $r['ppl_role'] : '' ); ?></span>
+              <span class="line"><?php echo esc_html( isset( $r['ppl_line'] ) ? $r['ppl_line'] : '' ); ?></span>
+            </figcaption>
+          </figure>
+          <?php endforeach; ?>
+        </div>
       </div>
       <?php endif; ?>
     </div>
   </section>
 
   <!-- 3. EUROPE : l'index du carnet -->
-  <section class="alb-europe alb-dark">
+  <section class="alb-europe alb-dark" id="alb-europe">
     <div class="alb-folio" aria-hidden="true">ii</div>
+    <?php if ( $ribbon ) : ?>
+    <div class="alb-ribbon" aria-hidden="true"><div class="track"><?php for ( $k = 0; $k < 2; $k++ ) { foreach ( $ribbon as $place ) echo '<span>' . esc_html( $place ) . '</span>'; } ?></div></div>
+    <?php endif; ?>
     <div class="alb-wrap">
       <div class="head">
         <div class="alb-rv">
@@ -2371,22 +2479,37 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
         </div>
         <p class="alb-lede alb-rv alb-d2"><?php echo esc_html( $f( 'eur_intro' ) ); ?></p>
       </div>
-      <div class="alb-index">
-        <?php $i = 0; foreach ( $eur as $r ) : $i++; $d = ( $i - 1 ) % 3;
-          $n  = isset( $r['eur_n'] ) ? $r['eur_n'] : '';
-          $c  = isset( $r['eur_c'] ) ? $r['eur_c'] : '';
-          if ( '' === trim( (string) $c ) && '' !== $n ) $c = strtoupper( substr( $n, 0, 2 ) );
-          $ph = ! empty( $r['eur_ph'] ) ? wp_get_attachment_image_url( (int) $r['eur_ph'], 'medium' ) : '';
-        ?>
-        <div class="row alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?>">
-          <div class="no"><?php echo esc_html( $roman( $i ) ); ?></div>
-          <div class="tx">
-            <h3><?php echo esc_html( $n ); ?></h3>
-            <p><?php echo esc_html( isset( $r['eur_d'] ) ? $r['eur_d'] : '' ); ?></p>
+      <div class="alb-atlas">
+        <div class="alb-index">
+          <?php $i = 0; $panes = array(); foreach ( $eur as $r ) : $i++; $d = ( $i - 1 ) % 3;
+            $n  = isset( $r['eur_n'] ) ? $r['eur_n'] : '';
+            $c  = isset( $r['eur_c'] ) ? $r['eur_c'] : '';
+            if ( '' === trim( (string) $c ) && '' !== $n ) $c = strtoupper( substr( $n, 0, 2 ) );
+            $u  = $img_url( isset( $r['eur_ph'] ) ? $r['eur_ph'] : 0, isset( $r['_url'] ) ? $r['_url'] : '', 'large' );
+            $panes[] = array( 'n' => $n, 'c' => $c, 'u' => $u );
+          ?>
+          <div class="row alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?><?php echo 1 === $i ? ' is-on' : ''; ?>" data-alb-pane="<?php echo $i; ?>">
+            <div class="no"><?php echo esc_html( $roman( $i ) ); ?></div>
+            <div class="tx">
+              <h3><?php echo esc_html( $n ); ?></h3>
+              <p><?php echo esc_html( isset( $r['eur_d'] ) ? $r['eur_d'] : '' ); ?></p>
+            </div>
+            <div class="ph" aria-hidden="true"><?php if ( $u ) : ?><img src="<?php echo esc_url( $u ); ?>" alt="" loading="lazy"><?php else : echo esc_html( $c ); endif; ?></div>
           </div>
-          <div class="ph" aria-hidden="true"><?php if ( $ph ) : ?><img src="<?php echo esc_url( $ph ); ?>" alt="" loading="lazy"><?php else : echo esc_html( $c ); endif; ?></div>
+          <?php endforeach; ?>
         </div>
-        <?php endforeach; ?>
+        <div class="alb-pane alb-rv alb-d1" aria-hidden="true">
+          <?php $i = 0; foreach ( $panes as $p ) : $i++; ?>
+          <figure class="<?php echo 1 === $i ? 'is-on' : ''; ?>" data-alb-pane="<?php echo $i; ?>">
+            <?php if ( $p['u'] ) : ?>
+            <img src="<?php echo esc_url( $p['u'] ); ?>" alt="" loading="lazy">
+            <?php else : ?>
+            <div class="plate"><span class="c"><?php echo esc_html( $p['c'] ); ?></span><span class="n"><?php echo esc_html( $p['n'] ); ?></span></div>
+            <?php endif; ?>
+            <figcaption><span class="c"><?php echo esc_html( $p['c'] ); ?></span><?php echo esc_html( $p['n'] ); ?></figcaption>
+          </figure>
+          <?php endforeach; ?>
+        </div>
       </div>
       <?php if ( $f( 'eur_foot' ) ) : ?>
       <p class="foot alb-rv"><?php echo esc_html( $f( 'eur_foot' ) ); ?></p>
@@ -2394,50 +2517,48 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
     </div>
   </section>
 
-  <!-- 4. BEHIND CLOSED DOORS -->
-  <section class="alb-doors alb-ivory">
+  <!-- 4. BEHIND CLOSED DOORS : bande photo pleine largeur -->
+  <section class="alb-doors" id="alb-doors">
+    <div class="alb-band-media" aria-hidden="true">
+      <?php if ( $dor_url ) : ?><img src="<?php echo esc_url( $dor_url ); ?>" alt="" loading="lazy" onerror="this.style.display='none'"><?php endif; ?>
+    </div>
+    <div class="alb-band-scrim" aria-hidden="true"></div>
     <div class="alb-folio" aria-hidden="true">iii</div>
-    <div class="alb-wrap">
-      <div class="grid">
-        <div class="alb-visual-wrap alb-rv">
-          <div class="alb-visual">
-            <?php if ( $dor_photo_url ) : ?>
-            <img src="<?php echo esc_url( $dor_photo_url ); ?>" alt="<?php echo esc_attr( $f( 'dor_title' ) . ' ' . $f( 'dor_title_em' ) ); ?>" loading="lazy" onerror="this.style.display='none'">
-            <?php endif; ?>
-          </div>
-          <?php if ( $f( 'dor_seal' ) ) : ?>
-          <div class="alb-seal" aria-hidden="true"><?php echo esc_html( $f( 'dor_seal' ) ); ?></div>
-          <?php endif; ?>
-        </div>
-        <div class="copy alb-rv alb-d2">
-          <div class="alb-chap"><span class="rn">III</span><span class="lb"><?php echo esc_html( $f( 'dor_lb' ) ); ?></span></div>
-          <h2><?php echo esc_html( $f( 'dor_title' ) ); ?> <em><?php echo esc_html( $f( 'dor_title_em' ) ); ?></em></h2>
-          <p class="lead"><?php echo esc_html( $f( 'dor_p1' ) ); ?></p>
-          <p><?php echo esc_html( $f( 'dor_p2' ) ); ?></p>
-        </div>
-      </div>
-
-      <?php if ( $pages ) : ?>
-      <div class="alb-pages">
-        <span class="alb-kicker left alb-rv"><?php echo esc_html( $f( 'dor_pages_lb' ) ); ?></span>
-        <div class="list">
-          <?php $i = 0; foreach ( $pages as $r ) : $i++; $d = ( $i - 1 ) % 2 + 1; ?>
-          <div class="item alb-rv alb-d<?php echo $d; ?>">
-            <div class="no"><?php echo esc_html( sprintf( '%02d', $i ) ); ?></div>
-            <div>
-              <h3><?php echo esc_html( isset( $r['dor_ph'] ) ? $r['dor_ph'] : '' ); ?></h3>
-              <p><?php echo esc_html( isset( $r['dor_pd'] ) ? $r['dor_pd'] : '' ); ?></p>
-            </div>
-          </div>
-          <?php endforeach; ?>
-        </div>
-      </div>
+    <div class="alb-narrow copy">
+      <div class="alb-chap alb-rv"><span class="rn">III</span><span class="lb"><?php echo esc_html( $f( 'dor_lb' ) ); ?></span></div>
+      <h2 class="alb-rv alb-d1"><?php echo esc_html( $f( 'dor_title' ) ); ?> <em><?php echo esc_html( $f( 'dor_title_em' ) ); ?></em></h2>
+      <p class="lead alb-rv alb-d2"><?php echo esc_html( $f( 'dor_p1' ) ); ?></p>
+      <p class="alb-rv alb-d3"><?php echo esc_html( $f( 'dor_p2' ) ); ?></p>
+      <?php if ( $f( 'dor_seal' ) ) : ?>
+      <div class="alb-seal alb-rv alb-d4" aria-hidden="true"><?php echo esc_html( $f( 'dor_seal' ) ); ?></div>
       <?php endif; ?>
     </div>
   </section>
 
-  <!-- 5. COMMENT NOUS OUVRONS LES PORTES -->
-  <section class="alb-way alb-wine">
+  <!-- 5. PAGES DU CARNET -->
+  <?php if ( $pages ) : ?>
+  <section class="alb-pages alb-ivory">
+    <div class="alb-wrap">
+      <div class="head alb-rv">
+        <span class="alb-kicker left"><?php echo esc_html( $f( 'dor_pages_lb' ) ); ?></span>
+        <h2><?php echo esc_html( $f( 'dor_pages_t' ) ); ?> <em><?php echo esc_html( $f( 'dor_pages_te' ) ); ?></em></h2>
+      </div>
+      <div class="list">
+        <?php $i = 0; foreach ( $pages as $r ) : $i++; $d = ( $i - 1 ) % 3;
+          $u = $img_url( isset( $r['dor_pp'] ) ? $r['dor_pp'] : 0, isset( $r['_url'] ) ? $r['_url'] : '', 'large' ); ?>
+        <article class="item alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?>">
+          <div class="ph"><?php if ( $u ) : ?><img src="<?php echo esc_url( $u ); ?>" alt="<?php echo esc_attr( isset( $r['dor_ph'] ) ? $r['dor_ph'] : '' ); ?>" loading="lazy"><?php endif; ?><span class="no"><?php echo esc_html( sprintf( '%02d', $i ) ); ?></span></div>
+          <h3><?php echo esc_html( isset( $r['dor_ph'] ) ? $r['dor_ph'] : '' ); ?></h3>
+          <p><?php echo esc_html( isset( $r['dor_pd'] ) ? $r['dor_pd'] : '' ); ?></p>
+        </article>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- 6. COMMENT NOUS OUVRONS LES PORTES -->
+  <section class="alb-way alb-wine" id="alb-way">
     <div class="alb-folio" aria-hidden="true">iv</div>
     <div class="alb-wrap">
       <div class="head alb-rv">
@@ -2448,6 +2569,7 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
       <div class="list">
         <?php $i = 0; foreach ( $way as $r ) : $i++; $d = ( $i - 1 ) % 3; ?>
         <div class="item alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?>">
+          <span class="no"><?php echo esc_html( sprintf( '%02d', $i ) ); ?></span>
           <h3><?php echo esc_html( isset( $r['way_h'] ) ? $r['way_h'] : '' ); ?></h3>
           <p><?php echo esc_html( isset( $r['way_d'] ) ? $r['way_d'] : '' ); ?></p>
         </div>
@@ -2456,9 +2578,25 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
     </div>
   </section>
 
-  <!-- 6. UN MOT SUR LA DISCRÉTION -->
+  <!-- 7. CITATION PLEINE LARGEUR -->
+  <?php if ( $f( 'quo_txt' ) ) : ?>
+  <section class="alb-quote">
+    <div class="alb-band-media" aria-hidden="true">
+      <?php if ( $quo_url ) : ?><img src="<?php echo esc_url( $quo_url ); ?>" alt="" loading="lazy" onerror="this.style.display='none'"><?php endif; ?>
+    </div>
+    <div class="alb-band-scrim" aria-hidden="true"></div>
+    <div class="alb-narrow">
+      <p class="q alb-rv"><?php echo esc_html( $f( 'quo_txt' ) ); ?></p>
+      <?php if ( $f( 'quo_by' ) ) : ?>
+      <span class="alb-kicker alb-rv alb-d2"><?php echo esc_html( $f( 'quo_by' ) ); ?></span>
+      <?php endif; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- 8. UN MOT SUR LA DISCRÉTION -->
   <?php if ( $f( 'note_txt' ) ) : ?>
-  <section class="alb-note alb-ivory">
+  <section class="alb-note alb-ivory" id="alb-note">
     <div class="alb-narrow">
       <div class="box alb-rv">
         <div class="alb-chap"><span class="rn">V</span><span class="lb"><?php echo esc_html( $f( 'note_lb' ) ); ?></span></div>
@@ -2468,8 +2606,12 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
   </section>
   <?php endif; ?>
 
-  <!-- 7. CLÔTURE : ouvrir le carnet -->
-  <section class="alb-cta alb-dark">
+  <!-- 9. CLÔTURE : ouvrir le carnet -->
+  <section class="alb-cta">
+    <div class="alb-band-media" aria-hidden="true">
+      <?php if ( $cta_url ) : ?><img src="<?php echo esc_url( $cta_url ); ?>" alt="" loading="lazy" onerror="this.style.display='none'"><?php endif; ?>
+    </div>
+    <div class="alb-band-scrim deep" aria-hidden="true"></div>
     <div class="alb-cover" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <?php if ( $f( 'cta_lb' ) ) : ?>
     <span class="alb-kicker alb-rv"><?php echo esc_html( $f( 'cta_lb' ) ); ?></span>
@@ -2507,6 +2649,17 @@ function aav_lb_render_little_black_book( $block, $content = '', $is_preview = f
   }
   var vid = root.querySelector('.alb-hero-media video');
   if (vid && reduce){ vid.removeAttribute('autoplay'); vid.pause(); }
+  /* index Europe : la photo de droite suit la ligne survolee */
+  var rows = root.querySelectorAll('.alb-index .row[data-alb-pane]');
+  var panes = root.querySelectorAll('.alb-pane figure[data-alb-pane]');
+  function show(n){
+    rows.forEach(function(r){ r.classList.toggle('is-on', r.getAttribute('data-alb-pane') === n); });
+    panes.forEach(function(p){ p.classList.toggle('is-on', p.getAttribute('data-alb-pane') === n); });
+  }
+  rows.forEach(function(r){
+    r.addEventListener('mouseenter', function(){ show(r.getAttribute('data-alb-pane')); });
+    r.addEventListener('focusin', function(){ show(r.getAttribute('data-alb-pane')); });
+  });
 })();
 </script>
 	<?php
