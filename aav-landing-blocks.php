@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       AAV — Landing Blocks
  * Description:        Editable ACF blocks for the AAV premium landing pages. Béatrice edits titles, texts, photos and the form link from the visual editor; the design stays pixel-perfect. Blocks: Alsace, Paris, French Alps, Sustainability, Our Story, The Little Black Book + Landing sur-mesure. Studio de modèles : créer/importer de nouvelles pages depuis l'admin, sans réinstaller l'extension. Works with Secure Custom Fields (SCF) or ACF PRO — both provide the blocks + repeater API.
- * Version:           2.6.0
+ * Version:           2.6.1
  * Update URI:        https://github.com/biolay-group/aav-landing-blocks
  * Requires at least: 6.0
  * Requires PHP:      7.4
@@ -3816,7 +3816,8 @@ function aav_lb_snapshot_html( $slug ) {
  * L'en-tête « Update URI » délègue à ce filtre. Il interroge la
  * dernière release publique du dépôt, compare le tag (vX.Y.Z) à la
  * version installée et propose le zip attaché à la release.
- * Réponse mise en cache 6 h ; 15 min en cas d'échec réseau.
+ * Réponse mise en cache 1 h (15 min en cas d'échec réseau), purgée à la
+ * visite des pages Mises à jour / Extensions et par le toolkit.
  * ================================================================== */
 define( 'AAV_LB_FILE', plugin_basename( __FILE__ ) );
 define( 'AAV_LB_REPO', 'biolay-group/aav-landing-blocks' );
@@ -3835,7 +3836,7 @@ add_filter( 'update_plugins_github.com', function ( $update, $plugin_data, $plug
 			return $update;
 		}
 		$release = json_decode( wp_remote_retrieve_body( $res ), true );
-		set_transient( 'aav_lb_gh_release', $release, 6 * HOUR_IN_SECONDS );
+		set_transient( 'aav_lb_gh_release', $release, HOUR_IN_SECONDS );
 	}
 	if ( empty( $release['tag_name'] ) ) return $update;
 
@@ -3860,3 +3861,9 @@ add_filter( 'update_plugins_github.com', function ( $update, $plugin_data, $plug
 }, 10, 3 );
 
 add_action( 'upgrader_process_complete', function () { delete_transient( 'aav_lb_gh_release' ); } );
+
+/* Visiter Tableau de bord > Mises à jour ou Extensions réinterroge GitHub
+   (WordPress limite lui-même la fréquence de ces vérifications). */
+foreach ( array( 'load-update-core.php', 'load-plugins.php' ) as $aav_lb_hook ) {
+	add_action( $aav_lb_hook, function () { delete_transient( 'aav_lb_gh_release' ); }, 1 );
+}
