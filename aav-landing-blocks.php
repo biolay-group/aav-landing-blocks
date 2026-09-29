@@ -1,15 +1,14 @@
 <?php
 /**
  * Plugin Name:       AAV — Landing Blocks
- * Description:        Editable ACF blocks for the AAV premium landing pages. Béatrice edits titles, texts, photos and the form link from the visual editor; the design stays pixel-perfect. Blocks: Alsace, Paris, French Alps, Sustainability, Our Story + Landing sur-mesure. Studio de modèles : créer/importer de nouvelles pages depuis l'admin, sans réinstaller l'extension. Works with Secure Custom Fields (SCF) or ACF PRO — both provide the blocks + repeater API.
- * Version:           2.4.3
+ * Description:        Editable ACF blocks for the AAV premium landing pages. Béatrice edits titles, texts, photos and the form link from the visual editor; the design stays pixel-perfect. Blocks: Alsace, Paris, French Alps, Sustainability, Our Story, The Little Black Book + Landing sur-mesure. Studio de modèles : créer/importer de nouvelles pages depuis l'admin, sans réinstaller l'extension. Works with Secure Custom Fields (SCF) or ACF PRO — both provide the blocks + repeater API.
+ * Version:           2.5.0
+ * Update URI:        https://github.com/biolay-group/aav-landing-blocks
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Biolay Group
  * License:           GPL-2.0-or-later
  * Text Domain:       aav-lb
- * GitHub Plugin URI: biolay-group/aav-landing-blocks
- * Primary Branch:    main
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -1242,6 +1241,11 @@ function aav_lb_templates() {
 			'title'       => 'AAV — Sustainability',
 			'description' => 'Page complète « Sustainability / Our Commitment » (bordeaux/Playfair), prête à éditer.',
 		),
+		'little-black-book' => array(
+			'block'       => 'acf/aav-little-black-book',
+			'title'       => 'AAV — The Little Black Book',
+			'description' => 'Page complète « The Little Black Book » (noir, bordeaux, or, Playfair), prête à éditer.',
+		),
 		'our-story' => array(
 			'block'       => 'acf/aav-our-story',
 			'title'       => 'AAV — Our Story (20 ans)',
@@ -2084,6 +2088,424 @@ function aav_lb_render_sustainability( $block, $content = '', $is_preview = fals
     root.querySelectorAll('.asu-rv').forEach(function(el){ io.observe(el); });
   }
   var vid = root.querySelector('.asu-hero-media video');
+  if (vid && reduce){ vid.removeAttribute('autoplay'); vid.pause(); }
+})();
+</script>
+	<?php
+	echo ob_get_clean();
+}
+
+/* ================================================================== *
+ * BLOC LITTLE BLACK BOOK — page « The Little Black Book »
+ * -----------------------------------------------------------------
+ * Conventions identiques aux blocs Sustainability / Our Story :
+ *   - clés de champs : bfld_… / accordéons : btab_…  (name = substr($key,5))
+ *   - répéteurs sans valeur par défaut → repli sur tableaux $def_* au rendu
+ *   - photos : ID de médiathèque, repli URL via aav_lb_url_to_id()
+ *   - CSS : assets/little-black-book.css (préfixe .alb-)
+ * ================================================================== */
+add_action( 'acf/init', function () {
+	if ( ! function_exists( 'acf_register_block_type' ) ) return;
+	acf_register_block_type( array(
+		'name'              => 'aav-little-black-book',
+		'title'             => __( 'AAV — Page : The Little Black Book', 'aav-lb' ),
+		'description'       => __( 'Éditable : textes, photos, pays, pages du carnet et liens. Structure figée.', 'aav-lb' ),
+		'category'          => 'formatting',
+		'icon'              => 'book-alt',
+		'keywords'          => array( 'aav', 'little black book', 'carnet', 'network', 'access' ),
+		'mode'              => 'edit',
+		'api_version'       => 3,
+		'acf_block_version' => 3,
+		'render_preview'    => false,
+		'supports'          => array( 'align' => false, 'multiple' => false, 'jsx' => true, 'mode' => false ),
+		'render_callback'   => 'aav_lb_render_little_black_book',
+	) );
+} );
+
+add_action( 'acf/init', function () {
+	if ( ! function_exists( 'acf_add_local_field_group' ) ) return;
+
+	$T = function ( $key, $label, $default = '', $type = 'text', $instr = '' ) {
+		return array( 'key' => $key, 'label' => $label, 'name' => substr( $key, 5 ), 'type' => $type, 'default_value' => $default, 'instructions' => $instr );
+	};
+	$tab = function ( $key, $label ) { return array( 'key' => $key, 'label' => $label, 'type' => 'accordion', 'open' => 0, 'multi_expand' => 1 ); };
+	$img = function ( $key, $label, $instr = 'Vide = la photo par défaut reste affichée.' ) {
+		return array( 'key' => $key, 'label' => $label, 'name' => substr( $key, 5 ), 'type' => 'image', 'return_format' => 'id', 'preview_size' => 'medium', 'library' => 'all', 'instructions' => $instr );
+	};
+
+	$f = array();
+
+	/* ---- Héro (la couverture) ---- */
+	$f[] = $tab( 'btab_hero', 'Héro (couverture)' );
+	$f[] = $T( 'bfld_hero_video', 'Vidéo de fond (URL .mp4)', '', 'text', 'Optionnel. MP4 H.264, 1080p, boucle 10 à 20 s, sans son, idéalement moins de 10 Mo. Vide = photo seule.' );
+	$f[] = $img( 'bfld_hero_photo', 'Image de fond', 'Affichée pendant le chargement de la vidéo et en secours. Vide = photo actuelle de la page Little Black Book.' );
+	$f[] = $T( 'bfld_hero_kicker', 'Surtitre', '20 Years · One Exceptional Network' );
+	$f[] = $T( 'bfld_hero_title', 'Titre', 'The Little' );
+	$f[] = $T( 'bfld_hero_title_em', 'Titre : italique doré', 'Black Book' );
+	$f[] = $T( 'bfld_hero_sub', 'Accroche', 'Twenty years of relationships have opened doors to exceptional people, places and experiences. Our Little Black Book is where local expertise, trusted connections and the unexpected come together.', 'textarea' );
+	$f[] = $T( 'bfld_hero_meta', 'Ligne discrète sous l\'accroche', 'Twenty years · Six countries · One address book', 'text', 'Vide = masquée.' );
+	$f[] = $T( 'bfld_hero_cue', 'Invitation à défiler', 'Open the book', 'text', 'Vide = masquée.' );
+
+	/* ---- I. Vingt ans ---- */
+	$f[] = $tab( 'btab_mak', 'I : Twenty years in the making' );
+	$f[] = $T( 'bfld_mak_lb', 'Libellé du chapitre', 'Twenty years in the making' );
+	$f[] = $T( 'bfld_mak_st', 'Grande phrase', 'The most memorable journeys begin with', 'textarea' );
+	$f[] = $T( 'bfld_mak_st_em', 'Grande phrase : partie italique', 'who you know.' );
+	$f[] = $T( 'bfld_mak_p1', 'Colonne gauche', 'For more than twenty years, AAV has built trusted relationships with the people who make Europe extraordinary: château owners and vignerons, chefs and artisans, curators, guides and private hosts. These are not suppliers found in a directory. They are friends of the house, met in person and returned to year after year.', 'textarea' );
+	$f[] = $T( 'bfld_mak_p2', 'Colonne droite', 'This is not simply a network of partners. It is a Little Black Book built over two decades, one relationship at a time: the numbers that answer, the doors that open, the names that vouch for ours. It is, quite simply, the reason our journeys feel the way they do.', 'textarea' );
+	$f[] = $T( 'bfld_mak_mark', 'Filigrane (grand chiffre en fond)', '20', 'text', 'Vide = masqué.' );
+	$f[] = array( 'key' => 'bfld_mak_figs', 'label' => 'Chiffres', 'name' => 'mak_figs', 'type' => 'repeater', 'layout' => 'table', 'button_label' => 'Ajouter un chiffre', 'instructions' => 'Vide = garder les chiffres par défaut. Pour n\'en afficher aucun, saisir une ligne vide.', 'sub_fields' => array(
+		$T( 'bfld_mak_fn', 'Chiffre', '' ), $T( 'bfld_mak_fl', 'Libellé', '' ),
+	) );
+
+	/* ---- II. Europe ---- */
+	$f[] = $tab( 'btab_eur', 'II : Our European expertise' );
+	$f[] = $T( 'bfld_eur_lb', 'Libellé du chapitre', 'Our European expertise' );
+	$f[] = $T( 'bfld_eur_title', 'Titre', 'Twenty years of connections' );
+	$f[] = $T( 'bfld_eur_title_em', 'Titre : italique doré', 'across Europe' );
+	$f[] = $T( 'bfld_eur_intro', 'Introduction', 'France is the heart of what we do, and where most of our journeys unfold. Yet the same relationships, cultivated with the same patience, reach across Italy, Switzerland, the United Kingdom, Spain and Portugal. In every country, our specialists live where you travel, and the people they trust become the people you meet.', 'textarea' );
+	$f[] = array( 'key' => 'bfld_eur_items', 'label' => 'Pays (index du carnet)', 'name' => 'eur_items', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter un pays', 'instructions' => 'Vide = garder les 6 pays par défaut. Le code (FR, IT…) s\'affiche dans la vignette quand il n\'y a pas de photo.', 'sub_fields' => array(
+		$T( 'bfld_eur_n', 'Pays', '' ), $T( 'bfld_eur_c', 'Code (2 lettres)', '' ), $T( 'bfld_eur_d', 'Une ligne', '', 'textarea' ),
+		array( 'key' => 'bfld_eur_ph', 'label' => 'Photo (optionnelle)', 'name' => 'eur_ph', 'type' => 'image', 'return_format' => 'id', 'preview_size' => 'thumbnail', 'library' => 'all' ),
+	) );
+	$f[] = $T( 'bfld_eur_foot', 'Phrase de fin (italique)', 'And, when your story calls for it, beyond.', 'text', 'Vide = masquée.' );
+
+	/* ---- III. Behind closed doors ---- */
+	$f[] = $tab( 'btab_dor', 'III : Behind closed doors' );
+	$f[] = $img( 'bfld_dor_photo', 'Photo' );
+	$f[] = $T( 'bfld_dor_seal', 'Monogramme du sceau', 'AAV', 'text', 'Vide = sceau masqué.' );
+	$f[] = $T( 'bfld_dor_lb', 'Libellé du chapitre', 'The Little Black Book' );
+	$f[] = $T( 'bfld_dor_title', 'Titre', 'Behind' );
+	$f[] = $T( 'bfld_dor_title_em', 'Titre : italique doré', 'closed doors' );
+	$f[] = $T( 'bfld_dor_p1', 'Chapeau', 'Some of the most memorable experiences cannot simply be booked. They are offered, by people who choose whom they welcome. They exist outside opening hours and off the pages of any guidebook, and they are extended only through introduction.', 'textarea' );
+	$f[] = $T( 'bfld_dor_p2', 'Paragraphe', 'A private collection viewed with its owner. An exceptional estate that is still a family home. An artist\'s studio on a working morning. Each door is opened for you personally, always with discretion, and never simply for the sake of exclusivity.', 'textarea' );
+	$f[] = $T( 'bfld_dor_pages_lb', 'Surtitre de la liste', 'Pages from the book' );
+	$f[] = array( 'key' => 'bfld_dor_pages', 'label' => 'Pages du carnet', 'name' => 'dor_pages', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter une page', 'instructions' => 'Vide = garder les 6 exemples par défaut.', 'sub_fields' => array(
+		$T( 'bfld_dor_ph', 'Titre', '' ), $T( 'bfld_dor_pd', 'Description', '', 'textarea' ),
+	) );
+
+	/* ---- IV. Comment nous ouvrons les portes ---- */
+	$f[] = $tab( 'btab_way', 'IV : How we open doors' );
+	$f[] = $T( 'bfld_way_lb', 'Libellé du chapitre', 'How we open doors' );
+	$f[] = $T( 'bfld_way_title', 'Titre', 'Relationships,' );
+	$f[] = $T( 'bfld_way_title_em', 'Titre : italique doré', 'not reservations' );
+	$f[] = $T( 'bfld_way_intro', 'Introduction', 'What sets these experiences apart is not that they are rare. It is that they are personal. Three principles guide every page of our Little Black Book, and you will recognise them in any journey we write for you.', 'textarea' );
+	$f[] = array( 'key' => 'bfld_way_items', 'label' => 'Principes', 'name' => 'way_items', 'type' => 'repeater', 'layout' => 'block', 'button_label' => 'Ajouter un principe', 'instructions' => 'Vide = garder les 3 principes par défaut.', 'sub_fields' => array(
+		$T( 'bfld_way_h', 'Titre', '' ), $T( 'bfld_way_d', 'Description', '', 'textarea' ),
+	) );
+
+	/* ---- V. Note ---- */
+	$f[] = $tab( 'btab_note', 'V : A word on discretion' );
+	$f[] = $T( 'bfld_note_lb', 'Libellé du chapitre', 'A word on discretion' );
+	$f[] = $T( 'bfld_note_txt', 'Note (Playfair italique)', 'Many of the doors in our Little Black Book open only because we have promised they will stay closed to everyone else. We keep that promise. It is why some of what we do cannot appear on this page, and why our guests are welcomed as friends rather than visitors.', 'textarea', 'Vide = section masquée.' );
+
+	/* ---- Clôture ---- */
+	$f[] = $tab( 'btab_cta', 'Clôture' );
+	$f[] = $T( 'bfld_cta_lb', 'Surtitre', 'Your journey starts here' );
+	$f[] = $T( 'bfld_cta_title', 'Titre', 'Open the' );
+	$f[] = $T( 'bfld_cta_title_em', 'Titre : italique doré', 'Little Black Book' );
+	$f[] = $T( 'bfld_cta_p', 'Paragraphe', 'Tell us what you are passionate about: the artists, the craft, the wine, the history, the table. We will open the pages that speak to it and shape a journey around encounters you will not find anywhere else, including some you may never have known were possible.', 'textarea' );
+	$f[] = $T( 'bfld_cta_btn_l', 'Bouton : libellé', 'Tailor my trip' );
+	$f[] = $T( 'bfld_cta_btn_u', 'Bouton : lien', '/tailor-my-trip/', 'text', 'URL complète, chemin (/tailor-my-trip/) ou ancre (#plan) résolue sur la page.' );
+	$f[] = $T( 'bfld_cta_link_l', 'Lien secondaire : libellé', 'Or read our story', 'text', 'Vide = masqué.' );
+	$f[] = $T( 'bfld_cta_link_u', 'Lien secondaire : URL', '', 'text', 'Vide = la page « Our Story » du site si elle existe.' );
+
+	acf_add_local_field_group( array(
+		'key'      => 'group_aav_lb_little_black_book',
+		'title'    => 'AAV — Page : The Little Black Book',
+		'fields'   => $f,
+		'location' => array( array( array( 'param' => 'block', 'operator' => '==', 'value' => 'acf/aav-little-black-book' ) ) ),
+	) );
+} );
+
+function aav_lb_render_little_black_book( $block, $content = '', $is_preview = false ) {
+
+	if ( $is_preview || is_admin() ) {
+		aav_lb_editor_placeholder( 'AAV — Page : The Little Black Book' );
+		return;
+	}
+
+	/* Surcharge HTML du modele : si presente, elle remplace le rendu dynamique */
+	if ( aav_lb_maybe_render_override( 'little-black-book' ) ) return;
+
+	/* Valeur du champ ; si le bloc n'a jamais été enregistré depuis l'éditeur,
+	   repli sur la valeur par défaut déclarée (clé bfld_…) pour que la page
+	   s'affiche complète dès l'insertion du modèle. */
+	$f    = function ( $n, $d = '' ) {
+		$v = get_field( $n );
+		if ( $v !== '' && $v !== null && $v !== false ) return $v;
+		if ( '' === $d && function_exists( 'acf_get_field' ) ) {
+			$fo = acf_get_field( 'bfld_' . $n );
+			if ( is_array( $fo ) && isset( $fo['default_value'] ) && '' !== $fo['default_value'] ) return $fo['default_value'];
+		}
+		return $d;
+	};
+	$rows = function ( $n, $fb ) { $v = get_field( $n ); return ( is_array( $v ) && count( $v ) ) ? $v : $fb; };
+	$img_url = function ( $id, $default_url = '' ) {
+		$url = $id ? wp_get_attachment_image_url( $id, 'full' ) : '';
+		if ( ! $url && $default_url ) { $did = aav_lb_url_to_id( $default_url ); $url = $did ? wp_get_attachment_image_url( $did, 'full' ) : $default_url; }
+		return $url ? $url : '';
+	};
+	$roman = function ( $n ) {
+		$map = array( 'X' => 10, 'IX' => 9, 'V' => 5, 'IV' => 4, 'I' => 1 ); $r = '';
+		foreach ( $map as $k => $v ) { while ( $n >= $v ) { $r .= $k; $n -= $v; } }
+		return $r;
+	};
+
+	$dp = array(
+		'hero' => 'https://www.aavluxurytravel.com/wp-content/uploads/2021/03/shutterstock_125765180-scaled.jpg',
+		'dor'  => 'https://www.aavluxurytravel.com/wp-content/uploads/2026/07/AdobeStock_513153814-1-scaled.jpeg',
+	);
+
+	$def_figs = array(
+		array( 'mak_fn' => '20', 'mak_fl' => 'Years of relationships' ),
+		array( 'mak_fn' => '6',  'mak_fl' => 'Countries, one house' ),
+		array( 'mak_fn' => '1',  'mak_fl' => 'Little Black Book' ),
+	);
+	$def_eur = array(
+		array( 'eur_n' => 'France',         'eur_c' => 'FR', 'eur_d' => 'The heart of the house. Châteaux, ateliers and vineyards we have known, and been welcomed in, for two decades.' ),
+		array( 'eur_n' => 'Italy',          'eur_c' => 'IT', 'eur_d' => 'From Piedmont to Puglia: the families, cellars and workshops behind the façades, and the tables that never needed a sign.' ),
+		array( 'eur_n' => 'Switzerland',    'eur_c' => 'CH', 'eur_d' => 'Alpine addresses, lakeside houses and the quiet precision of the people who keep them.' ),
+		array( 'eur_n' => 'United Kingdom', 'eur_c' => 'UK', 'eur_d' => 'Country estates, private rooms in London and the people who hold the keys.' ),
+		array( 'eur_n' => 'Spain',          'eur_c' => 'ES', 'eur_d' => 'Andalusian cortijos, Basque kitchens and artisans no guidebook will ever list.' ),
+		array( 'eur_n' => 'Portugal',       'eur_c' => 'PT', 'eur_d' => 'Quintas of the Douro, Lisbon ateliers and a coastline known by first name.' ),
+	);
+	$def_pages = array(
+		array( 'dor_ph' => 'A private collection',          'dor_pd' => 'Viewed after hours with its owner, in rooms that never open to the public.' ),
+		array( 'dor_ph' => 'An estate that is still a home', 'dor_pd' => 'Lunch served by the family who have kept the château for generations, at their own table.' ),
+		array( 'dor_ph' => 'An artist\'s studio',            'dor_pd' => 'A working morning among the pieces in progress, with the artist rather than a guide.' ),
+		array( 'dor_ph' => 'Coco Chanel\'s private apartments', 'dor_pd' => 'Rue Cambon, by introduction, and a story told by those who know it best.' ),
+		array( 'dor_ph' => 'A jeweller\'s archive on Place Vendôme', 'dor_pd' => 'Historic collections shown by the house itself, behind a door without a handle.' ),
+		array( 'dor_ph' => 'A cellar without a sign',        'dor_pd' => 'A vigneron\'s own reserve in Bordeaux, Burgundy or Champagne, opened for a table of four.' ),
+	);
+	$def_way = array(
+		array( 'way_h' => 'Earned in person',      'way_d' => 'Every introduction in our book was made face to face and kept over years. It is why doors open for our guests that do not open for a booking platform.' ),
+		array( 'way_h' => 'Discretion, always',    'way_d' => 'Many of our hosts welcome guests precisely because we never advertise them. What happens behind a closed door stays there.' ),
+		array( 'way_h' => 'Never for its own sake', 'way_d' => 'Access matters only when it means something to you. We open a door because it belongs in your story, not because it is hard to open.' ),
+	);
+
+	$figs  = $rows( 'mak_figs', $def_figs );
+	$eur   = $rows( 'eur_items', $def_eur );
+	$pages = $rows( 'dor_pages', $def_pages );
+	$way   = $rows( 'way_items', $def_way );
+
+	$video          = trim( (string) $f( 'hero_video', '' ) );
+	$hero_photo_url = $img_url( (int) get_field( 'hero_photo' ), $dp['hero'] );
+	$dor_photo_url  = $img_url( (int) get_field( 'dor_photo' ), $dp['dor'] );
+
+	$btn_url = aav_lb_cta_url( $f( 'cta_btn_u' ), '/tailor-my-trip/' );
+	$alt_url = trim( (string) $f( 'cta_link_u', '' ) );
+	if ( '' === $alt_url ) {
+		$story = get_page_by_path( 'our-story' );
+		if ( $story && 'publish' === $story->post_status ) $alt_url = get_permalink( $story );
+	} else {
+		$alt_url = aav_lb_cta_url( $alt_url, '' );
+	}
+
+	$css = aav_lb_css( 'little-black-book' );
+	ob_start();
+	if ( $css ) echo '<style>' . $css . '</style>';
+	?>
+<div class="alb-root">
+
+  <!-- 1. HÉRO : la couverture -->
+  <section class="alb-hero">
+    <div class="alb-hero-media" aria-hidden="true">
+      <?php if ( $hero_photo_url ) : ?>
+      <img class="alb-hero-still" src="<?php echo esc_url( $hero_photo_url ); ?>" alt="" loading="eager" onerror="this.style.display='none'">
+      <?php endif; ?>
+      <?php if ( $video ) : ?>
+      <video class="alb-hero-vid" autoplay muted loop playsinline preload="metadata"<?php echo $hero_photo_url ? ' poster="' . esc_url( $hero_photo_url ) . '"' : ''; ?>>
+        <source src="<?php echo esc_url( $video ); ?>" type="video/mp4">
+      </video>
+      <?php endif; ?>
+    </div>
+    <div class="alb-hero-scrim" aria-hidden="true"></div>
+    <div class="alb-cover" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <?php if ( $f( 'hero_kicker' ) ) : ?>
+    <span class="alb-kicker alb-rv"><?php echo esc_html( $f( 'hero_kicker' ) ); ?></span>
+    <?php endif; ?>
+    <h1 class="alb-rv alb-d1"><?php echo esc_html( $f( 'hero_title' ) ); ?> <em><?php echo esc_html( $f( 'hero_title_em' ) ); ?></em></h1>
+    <div class="alb-hero-rule alb-rv alb-d2" aria-hidden="true"></div>
+    <p class="alb-rv alb-d3"><?php echo esc_html( $f( 'hero_sub' ) ); ?></p>
+    <?php if ( $f( 'hero_meta' ) ) : ?>
+    <div class="alb-hero-meta alb-rv alb-d4"><?php echo esc_html( $f( 'hero_meta' ) ); ?></div>
+    <?php endif; ?>
+    <?php if ( $f( 'hero_cue' ) ) : ?>
+    <a class="alb-hero-cue" href="<?php echo esc_url( get_permalink() . '#alb-making' ); ?>"><span><?php echo esc_html( $f( 'hero_cue' ) ); ?></span><span class="l" aria-hidden="true"></span></a>
+    <?php endif; ?>
+    <div class="alb-hero-edge" aria-hidden="true"></div>
+  </section>
+
+  <!-- 2. VINGT ANS -->
+  <section class="alb-making" id="alb-making">
+    <?php if ( $f( 'mak_mark' ) ) : ?>
+    <div class="alb-mark" aria-hidden="true"><?php echo esc_html( $f( 'mak_mark' ) ); ?></div>
+    <?php endif; ?>
+    <div class="alb-folio" aria-hidden="true">i</div>
+    <div class="alb-wrap">
+      <div class="alb-chap alb-rv"><span class="rn">I</span><span class="lb"><?php echo esc_html( $f( 'mak_lb' ) ); ?></span></div>
+      <p class="alb-statement alb-rv alb-d1"><?php echo esc_html( $f( 'mak_st' ) ); ?> <span class="alb-em"><?php echo esc_html( $f( 'mak_st_em' ) ); ?></span></p>
+      <div class="cols">
+        <div class="alb-rv alb-d2"><p><?php echo esc_html( $f( 'mak_p1' ) ); ?></p></div>
+        <div class="alb-rv alb-d3"><p><?php echo esc_html( $f( 'mak_p2' ) ); ?></p></div>
+      </div>
+      <?php $figs = array_filter( $figs, function ( $r ) { return ! empty( $r['mak_fn'] ) || ! empty( $r['mak_fl'] ); } ); if ( $figs ) : ?>
+      <div class="figures alb-rv alb-d3">
+        <?php foreach ( $figs as $r ) : ?>
+        <div><div class="n"><?php echo esc_html( isset( $r['mak_fn'] ) ? $r['mak_fn'] : '' ); ?></div><div class="l"><?php echo esc_html( isset( $r['mak_fl'] ) ? $r['mak_fl'] : '' ); ?></div></div>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- 3. EUROPE : l'index du carnet -->
+  <section class="alb-europe alb-dark">
+    <div class="alb-folio" aria-hidden="true">ii</div>
+    <div class="alb-wrap">
+      <div class="head">
+        <div class="alb-rv">
+          <div class="alb-chap"><span class="rn">II</span><span class="lb"><?php echo esc_html( $f( 'eur_lb' ) ); ?></span></div>
+          <h2><?php echo esc_html( $f( 'eur_title' ) ); ?> <em><?php echo esc_html( $f( 'eur_title_em' ) ); ?></em></h2>
+        </div>
+        <p class="alb-lede alb-rv alb-d2"><?php echo esc_html( $f( 'eur_intro' ) ); ?></p>
+      </div>
+      <div class="alb-index">
+        <?php $i = 0; foreach ( $eur as $r ) : $i++; $d = ( $i - 1 ) % 3;
+          $n  = isset( $r['eur_n'] ) ? $r['eur_n'] : '';
+          $c  = isset( $r['eur_c'] ) ? $r['eur_c'] : '';
+          if ( '' === trim( (string) $c ) && '' !== $n ) $c = strtoupper( substr( $n, 0, 2 ) );
+          $ph = ! empty( $r['eur_ph'] ) ? wp_get_attachment_image_url( (int) $r['eur_ph'], 'medium' ) : '';
+        ?>
+        <div class="row alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?>">
+          <div class="no"><?php echo esc_html( $roman( $i ) ); ?></div>
+          <div class="tx">
+            <h3><?php echo esc_html( $n ); ?></h3>
+            <p><?php echo esc_html( isset( $r['eur_d'] ) ? $r['eur_d'] : '' ); ?></p>
+          </div>
+          <div class="ph" aria-hidden="true"><?php if ( $ph ) : ?><img src="<?php echo esc_url( $ph ); ?>" alt="" loading="lazy"><?php else : echo esc_html( $c ); endif; ?></div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php if ( $f( 'eur_foot' ) ) : ?>
+      <p class="foot alb-rv"><?php echo esc_html( $f( 'eur_foot' ) ); ?></p>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- 4. BEHIND CLOSED DOORS -->
+  <section class="alb-doors alb-ivory">
+    <div class="alb-folio" aria-hidden="true">iii</div>
+    <div class="alb-wrap">
+      <div class="grid">
+        <div class="alb-visual-wrap alb-rv">
+          <div class="alb-visual">
+            <?php if ( $dor_photo_url ) : ?>
+            <img src="<?php echo esc_url( $dor_photo_url ); ?>" alt="<?php echo esc_attr( $f( 'dor_title' ) . ' ' . $f( 'dor_title_em' ) ); ?>" loading="lazy" onerror="this.style.display='none'">
+            <?php endif; ?>
+          </div>
+          <?php if ( $f( 'dor_seal' ) ) : ?>
+          <div class="alb-seal" aria-hidden="true"><?php echo esc_html( $f( 'dor_seal' ) ); ?></div>
+          <?php endif; ?>
+        </div>
+        <div class="copy alb-rv alb-d2">
+          <div class="alb-chap"><span class="rn">III</span><span class="lb"><?php echo esc_html( $f( 'dor_lb' ) ); ?></span></div>
+          <h2><?php echo esc_html( $f( 'dor_title' ) ); ?> <em><?php echo esc_html( $f( 'dor_title_em' ) ); ?></em></h2>
+          <p class="lead"><?php echo esc_html( $f( 'dor_p1' ) ); ?></p>
+          <p><?php echo esc_html( $f( 'dor_p2' ) ); ?></p>
+        </div>
+      </div>
+
+      <?php if ( $pages ) : ?>
+      <div class="alb-pages">
+        <span class="alb-kicker left alb-rv"><?php echo esc_html( $f( 'dor_pages_lb' ) ); ?></span>
+        <div class="list">
+          <?php $i = 0; foreach ( $pages as $r ) : $i++; $d = ( $i - 1 ) % 2 + 1; ?>
+          <div class="item alb-rv alb-d<?php echo $d; ?>">
+            <div class="no"><?php echo esc_html( sprintf( '%02d', $i ) ); ?></div>
+            <div>
+              <h3><?php echo esc_html( isset( $r['dor_ph'] ) ? $r['dor_ph'] : '' ); ?></h3>
+              <p><?php echo esc_html( isset( $r['dor_pd'] ) ? $r['dor_pd'] : '' ); ?></p>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- 5. COMMENT NOUS OUVRONS LES PORTES -->
+  <section class="alb-way alb-wine">
+    <div class="alb-folio" aria-hidden="true">iv</div>
+    <div class="alb-wrap">
+      <div class="head alb-rv">
+        <div class="alb-chap"><span class="rn">IV</span><span class="lb"><?php echo esc_html( $f( 'way_lb' ) ); ?></span></div>
+        <h2><?php echo esc_html( $f( 'way_title' ) ); ?> <em><?php echo esc_html( $f( 'way_title_em' ) ); ?></em></h2>
+        <p class="alb-lede"><?php echo esc_html( $f( 'way_intro' ) ); ?></p>
+      </div>
+      <div class="list">
+        <?php $i = 0; foreach ( $way as $r ) : $i++; $d = ( $i - 1 ) % 3; ?>
+        <div class="item alb-rv<?php echo $d ? ' alb-d' . $d : ''; ?>">
+          <h3><?php echo esc_html( isset( $r['way_h'] ) ? $r['way_h'] : '' ); ?></h3>
+          <p><?php echo esc_html( isset( $r['way_d'] ) ? $r['way_d'] : '' ); ?></p>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. UN MOT SUR LA DISCRÉTION -->
+  <?php if ( $f( 'note_txt' ) ) : ?>
+  <section class="alb-note alb-ivory">
+    <div class="alb-narrow">
+      <div class="box alb-rv">
+        <div class="alb-chap"><span class="rn">V</span><span class="lb"><?php echo esc_html( $f( 'note_lb' ) ); ?></span></div>
+        <p class="q"><?php echo esc_html( $f( 'note_txt' ) ); ?></p>
+      </div>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- 7. CLÔTURE : ouvrir le carnet -->
+  <section class="alb-cta alb-dark">
+    <div class="alb-cover" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <?php if ( $f( 'cta_lb' ) ) : ?>
+    <span class="alb-kicker alb-rv"><?php echo esc_html( $f( 'cta_lb' ) ); ?></span>
+    <?php endif; ?>
+    <h2 class="alb-rv alb-d1"><?php echo esc_html( $f( 'cta_title' ) ); ?> <em><?php echo esc_html( $f( 'cta_title_em' ) ); ?></em></h2>
+    <div class="rule alb-rv alb-d2" aria-hidden="true"></div>
+    <p class="alb-rv alb-d3"><?php echo esc_html( $f( 'cta_p' ) ); ?></p>
+    <div class="actions alb-rv alb-d4">
+      <?php if ( $f( 'cta_btn_l' ) ) : ?>
+      <a class="alb-btn" href="<?php echo $btn_url; ?>"><?php echo esc_html( $f( 'cta_btn_l' ) ); ?></a>
+      <?php endif; ?>
+      <?php if ( $f( 'cta_link_l' ) && $alt_url ) : ?>
+      <a class="alt" href="<?php echo esc_url( $alt_url ); ?>"><?php echo esc_html( $f( 'cta_link_l' ) ); ?></a>
+      <?php endif; ?>
+    </div>
+  </section>
+
+</div>
+<script>
+(function(){
+  "use strict";
+  var root = document.querySelector('.alb-root');
+  if (!root || root.dataset.albInit) return;
+  root.dataset.albInit = '1';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var inEditor = document.body && document.body.classList.contains('block-editor-page');
+  if ('IntersectionObserver' in window && !reduce && !inEditor){
+    root.classList.add('alb-anim');
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('alb-in'); io.unobserve(e.target); }
+      });
+    },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+    root.querySelectorAll('.alb-rv, .alb-cover').forEach(function(el){ io.observe(el); });
+  }
+  var vid = root.querySelector('.alb-hero-media video');
   if (vid && reduce){ vid.removeAttribute('autoplay'); vid.pause(); }
 })();
 </script>
@@ -3119,6 +3541,7 @@ function aav_lb_builtin_map() {
 		'paris'          => array( 'name' => 'Christmas in Paris',       'block' => 'acf/aav-paris',          'css' => 'paris.css',          'render' => 'aav_lb_render_paris' ),
 		'alps'           => array( 'name' => 'Winter in the French Alps','block' => 'acf/aav-alps',           'css' => 'alps.css',           'render' => 'aav_lb_render_alps' ),
 		'sustainability' => array( 'name' => 'Sustainability',           'block' => 'acf/aav-sustainability', 'css' => 'sustainability.css', 'render' => 'aav_lb_render_sustainability' ),
+		'little-black-book' => array( 'name' => 'The Little Black Book',  'block' => 'acf/aav-little-black-book', 'css' => 'little-black-book.css', 'render' => 'aav_lb_render_little_black_book' ),
 		'our-story'      => array( 'name' => 'Our Story (20 ans)',       'block' => 'acf/aav-our-story',      'css' => 'our-story.css',      'render' => 'aav_lb_render_our_story' ),
 		'lb'             => array( 'name' => 'Landing sur-mesure (sections)', 'block' => 'acf/aav-builder',   'css' => 'lb.css',             'render' => 'aav_lb_render_builder' ),
 	);
@@ -3233,3 +3656,54 @@ function aav_lb_snapshot_html( $slug ) {
 	$html = preg_replace( '#<style\b[^>]*>.*?</style>#is', '', $html );
 	return trim( (string) $html );
 }
+
+/* ================================================================== *
+ * MISES À JOUR DEPUIS GITHUB (mécanisme natif de WordPress)
+ * -----------------------------------------------------------------
+ * L'en-tête « Update URI » délègue à ce filtre. Il interroge la
+ * dernière release publique du dépôt, compare le tag (vX.Y.Z) à la
+ * version installée et propose le zip attaché à la release.
+ * Réponse mise en cache 6 h ; 15 min en cas d'échec réseau.
+ * ================================================================== */
+define( 'AAV_LB_FILE', plugin_basename( __FILE__ ) );
+define( 'AAV_LB_REPO', 'biolay-group/aav-landing-blocks' );
+
+add_filter( 'update_plugins_github.com', function ( $update, $plugin_data, $plugin_file ) {
+	if ( AAV_LB_FILE !== $plugin_file ) return $update;
+
+	$release = get_transient( 'aav_lb_gh_release' );
+	if ( false === $release ) {
+		$res = wp_remote_get( 'https://api.github.com/repos/' . AAV_LB_REPO . '/releases/latest', array(
+			'timeout' => 10,
+			'headers' => array( 'Accept' => 'application/vnd.github+json', 'User-Agent' => 'AAV-Landing-Blocks/' . $plugin_data['Version'] ),
+		) );
+		if ( is_wp_error( $res ) || 200 !== wp_remote_retrieve_response_code( $res ) ) {
+			set_transient( 'aav_lb_gh_release', array(), 15 * MINUTE_IN_SECONDS );
+			return $update;
+		}
+		$release = json_decode( wp_remote_retrieve_body( $res ), true );
+		set_transient( 'aav_lb_gh_release', $release, 6 * HOUR_IN_SECONDS );
+	}
+	if ( empty( $release['tag_name'] ) ) return $update;
+
+	$remote = ltrim( $release['tag_name'], 'vV' );
+	if ( ! preg_match( '/^\d+(\.\d+)*$/', $remote ) ) return $update;
+	if ( version_compare( $remote, $plugin_data['Version'], '<=' ) ) return $update;
+
+	$package = '';
+	foreach ( (array) ( isset( $release['assets'] ) ? $release['assets'] : array() ) as $asset ) {
+		$url = isset( $asset['browser_download_url'] ) ? $asset['browser_download_url'] : '';
+		if ( $url && preg_match( '#^https://github\.com/#', $url ) && preg_match( '/\.zip$/i', $url ) ) { $package = $url; break; }
+	}
+	if ( '' === $package && ! empty( $release['zipball_url'] ) ) $package = $release['zipball_url'];
+	if ( '' === $package ) return $update;
+
+	return array(
+		'slug'    => dirname( AAV_LB_FILE ),
+		'version' => $remote,
+		'url'     => 'https://github.com/' . AAV_LB_REPO,
+		'package' => $package,
+	);
+}, 10, 3 );
+
+add_action( 'upgrader_process_complete', function () { delete_transient( 'aav_lb_gh_release' ); } );
